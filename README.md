@@ -46,15 +46,17 @@ RGA hardware scaler errors (`width stride not 16-aligned`).
 
 ## Known Issues
 
-### `dvpOpenByName` segfault on GigE cameras
+### `dvpOpenByName` segfault
 
-**Symptom**: crash inside `D3tNodeMapAdapter::GetNode` in `GigEGen.dscam.so`.
+**Symptom**: crash inside a `.dscam.so` plugin (e.g. `GigEGen.dscam.so`,
+`usb3_m3s_all.dscam.so`) during `dvpOpenByName`. Affects both GigE and USB
+cameras.
 
-**Root cause**: `libdvp.so` lazily `dlopen`s `GigEGen.dscam.so` at open time.
-That library uses GenICam C++ types (`gcstring`) that require `libstdc++.so.6`
-to be loaded *before* the shared lib runs. Binaries that use only C-style stdio
-don't pull `libstdc++` at link time — so when `dlopen` fires, the C++ runtime
-is uninitialized → SIGSEGV.
+**Root cause**: `libdvp.so` lazily `dlopen`s the appropriate camera driver
+`.dscam.so` at open time. These plugins use GenICam/C++ types that require
+`libstdc++.so.6` to be loaded and initialized *before* the plugin runs.
+Binaries that use only C-style stdio don't pull `libstdc++` at link time —
+so when `dlopen` fires, the C++ runtime is uninitialized → SIGSEGV.
 
 **Fix**: Link any DVP2 binary with:
 ```
@@ -65,4 +67,4 @@ and `Dvp2StreamCallback` use `<iostream>`/`<string>` so they pull `libstdc++`
 naturally.
 
 **Note**: Camera open (`dvpOpenByName`) must also be called from a `pthread`
-worker, not from the `main` thread — required by `GigEGen.dscam.so`.
+worker, not from the `main` thread.

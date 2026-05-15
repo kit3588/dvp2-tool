@@ -17,9 +17,9 @@ IPConfigDemo: IPConfigDemo.cpp
 Dvp2StreamCallback: Dvp2StreamCallback.cpp
 	$(CXX) -o $@ $< $(LIBS)
 
-# ResetCamera must force-link libstdc++ so GigEGen.dscam.so (loaded lazily via
-# dlopen inside libdvp.so) gets a fully-initialized C++ runtime. Without this,
-# dvpOpenByName segfaults in D3tNodeMapAdapter::GetNode on GigE cameras.
+# ResetCamera must force-link libstdc++ so the camera driver .dscam.so plugins
+# (loaded lazily via dlopen inside libdvp.so) get a fully-initialized C++
+# runtime. Without this, dvpOpenByName segfaults on both GigE and USB cameras.
 ResetCamera: ResetCamera.cpp
 	$(CXX) -o $@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
 
