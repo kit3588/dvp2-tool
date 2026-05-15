@@ -1,14 +1,13 @@
 /**
  * ResetCamera — print camera settings and reset ROI to full frame.
  *
- * Pattern matches Demo.cpp: open the camera from a worker pthread, not main.
- * The GenICam node-map init in GigEGen.dscam.so segfaults if Open is called
- * from the main thread (observed on aarch64).
+ * Requires linking with -Wl,--no-as-needed -lstdc++ so that libstdc++.so.6
+ * is loaded before libdvp.so dlopen's the camera driver plugin (.dscam.so).
+ * Without it, dvpOpenByName segfaults on both GigE and USB cameras.
+ * See Makefile ResetCamera target.
  */
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
-#include <pthread.h>
 #include "DVPCamera.h"
 
 static void print_settings(dvpHandle h, const char *label)
@@ -41,19 +40,35 @@ static void print_settings(dvpHandle h, const char *label)
     printf("\n");
 }
 
-static void *worker(void *p)
+int main(void)
 {
-    const char *name = (const char *)p;
+    dvpUint32 count = 0;
     dvpStatus s;
     dvpHandle h;
 
-    printf("worker: opening %s...\n", name);
-    s = dvpOpenByName(name, OPEN_NORMAL, &h);
-    if (s != DVP_STATUS_OK) {
-        fprintf(stderr, "worker: dvpOpenByName failed: %d\n", s);
-        return nullptr;
+    printf("start...\n");
+    dvpRefresh(&count);
+    printf("dvpRefresh count = %u\n", count);
+    if (count == 0) {
+        fprintf(stderr, "No DVP camera found.\n");
+        return 1;
     }
-    printf("worker: open OK\n");
+
+    dvpCameraInfo info[8];
+    if (count > 8) count = 8;
+    for (dvpUint32 i = 0; i < count; i++) {
+        if (dvpEnum(i, &info[i]) == DVP_STATUS_OK)
+            printf("  [%u] %s  SN:%s\n", i,
+                   info[i].FriendlyName, info[i].OriginalSerialNumber);
+    }
+
+    printf("opening %s...\n", info[0].FriendlyName);
+    s = dvpOpenByName(info[0].FriendlyName, OPEN_NORMAL, &h);
+    if (s != DVP_STATUS_OK) {
+        fprintf(stderr, "dvpOpenByName failed: %d\n", s);
+        return 1;
+    }
+    printf("open OK\n");
 
     print_settings(h, "Current settings");
 
@@ -69,13 +84,12 @@ static void *worker(void *p)
         s = dvpSetRoiState(h, false);
         printf("  dvpSetRoiState(false): %d\n", s);
         s = dvpSetRoi(h, full);
-        printf("  dvpSetRoi(0,0,%d,%d): %d\n",
-               full.W, full.H, s);
+        printf("  dvpSetRoi(0,0,%d,%d): %d\n", full.W, full.H, s);
     }
 
     print_settings(h, "Settings after reset");
 
-    // Persist: save current settings to UserSet1 and make it the default on next open.
+    // Persist: save to UserSet1 and make it the default on next open
     printf("Persisting (UserSet1)...\n");
     s = dvpSaveUserSet(h, USER_SET_1);
     printf("  dvpSaveUserSet(USER_SET_1): %d\n", s);
@@ -83,35 +97,6 @@ static void *worker(void *p)
     printf("  dvpSetUserSet(USER_SET_1) [default-on-boot]: %d\n", s);
 
     dvpClose(h);
-    printf("worker: closed.\n");
-    return nullptr;
-}
-
-int main(void)
-{
-    dvpUint32 count = 0;
-
-    printf("start...\n");
-    dvpRefresh(&count);
-    printf("dvpRefresh count = %u\n", count);
-    if (count == 0) {
-        fprintf(stderr, "No DVP camera found.\n");
-        return 1;
-    }
-
-    dvpCameraInfo info[8];
-    if (count > 8) count = 8;
-    for (dvpUint32 i = 0; i < count; i++) {
-        if (dvpEnum(i, &info[i]) == DVP_STATUS_OK) {
-            printf("  [%u] %s  SN:%s\n", i,
-                   info[i].FriendlyName, info[i].OriginalSerialNumber);
-        }
-    }
-
-    pthread_t tid;
-    pthread_create(&tid, NULL, worker, (void *)info[0].FriendlyName);
-    pthread_join(tid, NULL);
-
     printf("Done.\n");
     return 0;
 }
