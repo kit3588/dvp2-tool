@@ -4,7 +4,7 @@ CXX = g++
 # DVP2 libs assumed installed in /usr/lib (from vendor install.sh or package)
 LIBS = -L/usr/lib -ldvp -lhzd -lpthread -Wl,-rpath,/usr/lib -std=c++11
 
-TARGET = Demo IPConfigDemo Dvp2StreamCallback ResetCamera CameraInfo
+TARGET = Demo IPConfigDemo Dvp2StreamCallback ResetCamera CameraInfo StrobeDemo
 
 all: $(TARGET)
 
@@ -24,6 +24,9 @@ ResetCamera: ResetCamera.cpp
 	$(CXX) -o $@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
 
 CameraInfo: CameraInfo.cpp
+	$(CXX) -o $@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
+
+StrobeDemo: StrobeDemo.cpp
 	$(CXX) -o $@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
 
 clean:
