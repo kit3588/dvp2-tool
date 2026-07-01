@@ -1,6 +1,8 @@
 CC  = gcc
 CXX = g++
 
+BINDIR = bin
+
 # DVP2 libs assumed installed in /usr/lib (from vendor install.sh or package)
 LIBS = -L/usr/lib -ldvp -lhzd -lpthread -Wl,-rpath,/usr/lib -std=c++11
 
@@ -8,29 +10,32 @@ TARGET = Demo IPConfigDemo Dvp2StreamCallback ResetCamera CameraInfo StrobeDemo 
 
 all: $(TARGET)
 
-Demo: Demo.cpp
-	$(CXX) -o $@ $< $(LIBS)
+$(BINDIR):
+	mkdir -p $(BINDIR)
 
-IPConfigDemo: IPConfigDemo.cpp
-	$(CXX) -o $@ $< $(LIBS)
+Demo: Demo.cpp | $(BINDIR)
+	$(CXX) -o $(BINDIR)/$@ $< $(LIBS)
 
-Dvp2StreamCallback: Dvp2StreamCallback.cpp
-	$(CXX) -o $@ $< $(LIBS)
+IPConfigDemo: IPConfigDemo.cpp | $(BINDIR)
+	$(CXX) -o $(BINDIR)/$@ $< $(LIBS)
+
+Dvp2StreamCallback: Dvp2StreamCallback.cpp | $(BINDIR)
+	$(CXX) -o $(BINDIR)/$@ $< $(LIBS)
 
 # ResetCamera must force-link libstdc++ so the camera driver .dscam.so plugins
 # (loaded lazily via dlopen inside libdvp.so) get a fully-initialized C++
 # runtime. Without this, dvpOpenByName segfaults on both GigE and USB cameras.
-ResetCamera: ResetCamera.cpp
-	$(CXX) -o $@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
+ResetCamera: ResetCamera.cpp | $(BINDIR)
+	$(CXX) -o $(BINDIR)/$@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
 
-CameraInfo: CameraInfo.cpp
-	$(CXX) -o $@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
+CameraInfo: CameraInfo.cpp | $(BINDIR)
+	$(CXX) -o $(BINDIR)/$@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
 
-StrobeDemo: StrobeDemo.cpp
-	$(CXX) -o $@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
+StrobeDemo: StrobeDemo.cpp | $(BINDIR)
+	$(CXX) -o $(BINDIR)/$@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
 
-gige-ip: gige-ip.cpp
-	$(CXX) -o $@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
+gige-ip: gige-ip.cpp | $(BINDIR)
+	$(CXX) -o $(BINDIR)/$@ $< -Wl,--no-as-needed -lstdc++ -Wl,--as-needed $(LIBS)
 
 clean:
-	$(RM) -f $(TARGET)
+	$(RM) -rf $(BINDIR)
