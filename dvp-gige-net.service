@@ -1,0 +1,15 @@
+[Unit]
+Description=Configure GigE Camera Network Interfaces
+After=network-pre.target
+Before=network.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/dvp2-tool/setup-gige-camera-net.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
