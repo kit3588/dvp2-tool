@@ -26,17 +26,15 @@ jobs:
         run: |
           set -euo pipefail
           cd hmi-build
-          if [ ! -f manifest.yaml ]; then
-            echo "manifest.yaml not found in kit3588/hmi-build" >&2
-            exit 1
-          fi
           python3 - "$GITHUB_SHA" << 'PYEOF'
-          import sys, re
+          import re
+          import sys
+          from pathlib import Path
+
           sha = sys.argv[1]
           key = "dvp2-tool"
-          path = "manifest.yaml"
-          with open(path) as f:
-              lines = f.readlines()
+          path = Path("manifest.yaml")
+          lines = path.read_text().splitlines(keepends=True) if path.exists() else []
           pattern = re.compile(rf"^{re.escape(key)}:\s*.*$")
           found = False
           for i, line in enumerate(lines):
@@ -46,8 +44,7 @@ jobs:
                   break
           if not found:
               lines.append(f"{key}: {sha}\n")
-          with open(path, "w") as f:
-              f.writelines(lines)
+          path.write_text("".join(lines))
           PYEOF
 
       - name: Open or update PR against hmi-build
@@ -63,4 +60,3 @@ jobs:
             Automated manifest bump triggered by push to `dvp2-tool@main`.
 
             Commit: ${{ github.sha }}
-          labels: manifest-bump
