@@ -26,6 +26,10 @@ jobs:
         run: |
           set -euo pipefail
           cd hmi-build
+          if [ ! -f manifest.yaml ]; then
+            echo "manifest.yaml not found in kit3588/hmi-build" >&2
+            exit 1
+          fi
           python3 - "$GITHUB_SHA" << 'PYEOF'
           import re
           import sys
@@ -34,7 +38,7 @@ jobs:
           sha = sys.argv[1]
           key = "dvp2-tool"
           path = Path("manifest.yaml")
-          lines = path.read_text().splitlines(keepends=True) if path.exists() else []
+          lines = path.read_text().splitlines(keepends=True)
           pattern = re.compile(rf"^{re.escape(key)}:\s*.*$")
           found = False
           for i, line in enumerate(lines):
