@@ -52,6 +52,7 @@ jobs:
           PYEOF
 
       - name: Open or update PR against hmi-build
+        id: create-pr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.HMI_BUILD_PAT }}
@@ -64,3 +65,13 @@ jobs:
             Automated manifest bump triggered by push to `dvp2-tool@main`.
 
             Commit: ${{ github.sha }}
+
+      - name: Auto-merge manifest PR
+        if: steps.create-pr.outputs.pull-request-operation != 'closed'
+        env:
+          GH_TOKEN: ${{ secrets.HMI_BUILD_PAT }}
+        run: |
+          gh pr merge "${{ steps.create-pr.outputs.pull-request-number }}" \
+            --repo kit3588/hmi-build \
+            --squash \
+            --auto
