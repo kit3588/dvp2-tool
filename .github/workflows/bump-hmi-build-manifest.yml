@@ -15,11 +15,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Generate hmi-build app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HMI_BUILD_APP_ID }}
+          private-key: ${{ secrets.HMI_BUILD_APP_PRIVATE_KEY }}
+          owner: kit3588
+          repositories: hmi-build
+
       - name: Checkout hmi-build
         uses: actions/checkout@v4
         with:
           repository: kit3588/hmi-build
-          token: ${{ secrets.HMI_BUILD_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           path: hmi-build
 
       - name: Update manifest key
@@ -55,7 +64,7 @@ jobs:
         id: create-pr
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.HMI_BUILD_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           path: hmi-build
           commit-message: "chore: bump dvp2-tool to ${{ github.sha }}"
           branch: bump-dvp2-tool-manifest
@@ -69,7 +78,7 @@ jobs:
       - name: Auto-merge manifest PR
         if: steps.create-pr.outputs.pull-request-operation != 'closed'
         env:
-          GH_TOKEN: ${{ secrets.HMI_BUILD_PAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           gh pr merge "${{ steps.create-pr.outputs.pull-request-number }}" \
             --repo kit3588/hmi-build \
